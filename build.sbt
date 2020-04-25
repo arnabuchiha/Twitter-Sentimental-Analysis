@@ -12,6 +12,8 @@ libraryDependencies += "org.twitter4j" % "twitter4j-stream" % "3.0.3"
 libraryDependencies += "edu.stanford.nlp" % "stanford-corenlp" % "3.5.1"
 
 libraryDependencies += "edu.stanford.nlp" % "stanford-corenlp" % "3.5.1" classifier "models"
+libraryDependencies += "com.datastax.spark" %% "spark-cassandra-connector" % "2.4.3"
+
 
 
 

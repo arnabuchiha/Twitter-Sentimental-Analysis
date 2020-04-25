@@ -3,9 +3,12 @@ import org.apache.spark.SparkConf
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.elasticsearch.spark._
 import org.apache.spark.SparkContext._
+
 import scala.util.Try
 import org.apache.spark.streaming.twitter.TwitterUtils
 import SentimentalAnalysis.detectSentiment
+import com.datastax.spark.connector._
+import com.datastax.spark.connector.writer.{TTLOption, WriteConf}
 object TwitterPopularTags {
   def main(args: Array[String]) {
 
@@ -32,10 +35,9 @@ object TwitterPopularTags {
     System.setProperty("twitter4j.oauth.accessToken", accessToken)
     System.setProperty("twitter4j.oauth.accessTokenSecret", accessTokenSecret)
 
-    val conf = new SparkConf().setAppName("senti_analyze").setMaster("local[2]")
-
-    val ssc = new StreamingContext(conf, Seconds(1))
-
+    val conf = new SparkConf().setAppName("senti_analyze").setMaster("local[*]")
+    conf.set("spark.cassandra.connection.host","localhost:9042")
+    val ssc = new StreamingContext(conf, Seconds(10))
     val tweets = TwitterUtils.createStream(ssc, None, filters)
 
     tweets.print()
@@ -51,7 +53,7 @@ object TwitterPopularTags {
           "language" -> t.getLang,
           "sentiment" -> detectSentiment(t.getText).toString
         )
-      })
+      }).saveToCassandra("lab","movies")
     }
 //    tweets.foreachRDD((rdd,time)=>
 //      rdd.map(t=>(System.out.println(t.getText)))
