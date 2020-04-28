@@ -1,0 +1,14 @@
+<component name="libraryTable">
+  <library name="com.datastax.cassandra:cassandra-driver-core:2.0.2" type="repository">
+    <properties maven-id="com.datastax.cassandra:cassandra-driver-core:2.0.2" />
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/datastax/cassandra/cassandra-driver-core/2.0.2/cassandra-driver-core-2.0.2.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/io/netty/netty/3.9.0.Final/netty-3.9.0.Final.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/com/google/guava/guava/16.0.1/guava-16.0.1.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/com/codahale/metrics/metrics-core/3.0.2/metrics-core-3.0.2.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/slf4j/slf4j-api/1.7.5/slf4j-api-1.7.5.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

@@ -1,14 +1,21 @@
 //import org.apache.spark.SparkConf
-import org.apache.spark.SparkConf
+import java.util.UUID
+
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.elasticsearch.spark._
 import org.apache.spark.SparkContext._
-
+import org.apache.spark.sql.SparkSession
 import scala.util.Try
+import com.mongodb.spark.sql._
 import org.apache.spark.streaming.twitter.TwitterUtils
 import SentimentalAnalysis.detectSentiment
 import com.datastax.spark.connector._
-import com.datastax.spark.connector.writer.{TTLOption, WriteConf}
+import org.apache.spark.sql.cassandra._
+import com.datastax.spark.connector.writer.{SqlRowWriter, TTLOption, WriteConf}
+import org.apache.spark
+import com.mongodb.spark.config._
+import com.mongodb.spark._
 object TwitterPopularTags {
   def main(args: Array[String]) {
 
@@ -27,7 +34,7 @@ object TwitterPopularTags {
 
 //    val Array(consumerKey, consumerSecret, accessToken, accessTokenSecret) = args.take(4)
 //    val filters = args.takeRight(args.length - 4)
-  val filters=Array("Trump")
+  val filters=Array("Modi")
     // Set the system properties so that Twitter4j library used by twitter stream
     // can use them to generate OAuth credentials
     System.setProperty("twitter4j.oauth.consumerKey", consumerKey)
@@ -35,26 +42,53 @@ object TwitterPopularTags {
     System.setProperty("twitter4j.oauth.accessToken", accessToken)
     System.setProperty("twitter4j.oauth.accessTokenSecret", accessTokenSecret)
 
-    val conf = new SparkConf().setAppName("senti_analyze").setMaster("local[*]")
-    conf.set("spark.cassandra.connection.host","localhost:9042")
-    val ssc = new StreamingContext(conf, Seconds(10))
-    val tweets = TwitterUtils.createStream(ssc, None, filters)
 
+    val conf = new SparkConf().setAppName("senti_analyze").setMaster("local[*]")
+    conf.set("spark.mongodb.input.uri", "mongodb://127.0.0.1/test.myCollection")
+    conf.set("spark.mongodb.output.uri", "mongodb://127.0.0.1/test.myCollection")
+    val sc=new SparkContext(conf)
+    import org.bson.Document
+
+
+    val ssc = new StreamingContext(sc, Seconds(10))
+//    val sc = spark.SparkContext.getOrCreate()
+//    sc.cassandraTable("twitter","twitter_table")
+    val tweets = TwitterUtils.createStream(ssc, None, filters)
     tweets.print()
-    tweets.foreachRDD{(rdd, time) =>
+    val tweetWithSentiment =tweets.map(_.getText)
+      .map(r => {
+        val sentiment = detectSentiment(r);
+        ("dadd", sentiment)
+      })
+//    try {
+//      val rdd = sc.parallelize(Seq(tweetWithSentiment))
+//      MongoSpark.save(rdd)
+//    }finally{
+//      print("Done")
+//    }
+//    rdd.saveToMongoDB()
+
+    tweets.foreachRDD({ rdd =>
+      val sparkSession = SparkSessionSingleton.getInstance(rdd.sparkContext)
+      import sparkSession.implicits._
       rdd.map(t => {
-        Map(
-          "user"-> t.getUser.getScreenName,
-          "created_at" -> t.getCreatedAt.toInstant.toString,
-          "location" -> Option(t.getGeoLocation).map(geo => { s"${geo.getLatitude},${geo.getLongitude}" }),
-          "text" -> t.getText,
-          "hashtags" -> t.getHashtagEntities.map(_.getText),
-          "retweet" -> t.getRetweetCount,
-          "language" -> t.getLang,
-          "sentiment" -> detectSentiment(t.getText).toString
-        )
-      }).saveToCassandra("lab","movies")
-    }
+        (t.getUser.getScreenName.toString, detectSentiment(t.getText))
+      }).toDF().write.mode("append").mongo()
+    })
+//    tweets.foreachRDD{(rdd, time) =>
+//      rdd.map(t => {
+//        Map(
+//          "user"-> t.getUser.getScreenName,
+////          "created_at" -> t.getCreatedAt.toInstant.toString,
+////          "location" -> Option(t.getGeoLocation).map(geo => { s"${geo.getLatitude},${geo.getLongitude}" }),
+////          "text" -> t.getText,
+////          "hashtags" -> t.getHashtagEntities.map(_.getText),
+////          "retweet" -> t.getRetweetCount,
+////          "language" -> t.getLang,
+//          "sentiment" -> detectSentiment(t.getText).toString
+//        )
+//      }).saveToCassandra("project","tweets",SomeColumns("user","sentiment"))
+//    }
 //    tweets.foreachRDD((rdd,time)=>
 //      rdd.map(t=>(System.out.println(t.getText)))
 //    )
@@ -62,7 +96,17 @@ object TwitterPopularTags {
     ssc.awaitTermination()
 
   }
+  object SparkSessionSingleton {
 
+    @transient private var instance: SparkSession = _
+
+    def getInstance(sparkContext: SparkContext): SparkSession = {
+      if (Option(instance).isEmpty) {
+        instance = SparkSession.builder().getOrCreate()
+      }
+      instance
+    }
+  }
   def detectLanguage(text: String) : Any = {
 
     Try {
