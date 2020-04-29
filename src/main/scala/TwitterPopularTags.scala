@@ -38,11 +38,9 @@ object TwitterPopularTags {
 
 //    val Array(consumerKey, consumerSecret, accessToken, accessTokenSecret) = args.take(4)
 //    val filters = args.takeRight(args.length - 4)
-<<<<<<< HEAD
+
   val filters=Array("irrfankhan")
-=======
-  val filters=Array("Electrolux")
->>>>>>> 391789a978ea515d077222058684b378d17bf9cf
+
     // Set the system properties so that Twitter4j library used by twitter stream
     // can use them to generate OAuth credentials
     System.setProperty("twitter4j.oauth.consumerKey", consumerKey)
