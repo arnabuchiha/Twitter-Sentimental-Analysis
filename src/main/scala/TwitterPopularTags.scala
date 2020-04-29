@@ -38,7 +38,7 @@ object TwitterPopularTags {
 
 //    val Array(consumerKey, consumerSecret, accessToken, accessTokenSecret) = args.take(4)
 //    val filters = args.takeRight(args.length - 4)
-  val filters=Array("Modi")
+  val filters=Array("irrfankhan")
     // Set the system properties so that Twitter4j library used by twitter stream
     // can use them to generate OAuth credentials
     System.setProperty("twitter4j.oauth.consumerKey", consumerKey)
@@ -53,7 +53,7 @@ object TwitterPopularTags {
     val sc=new SparkContext(conf)
     import org.bson.Document
 
-    val ssc = new StreamingContext(sc, Seconds(10))
+    val ssc = new StreamingContext(sc, Seconds(1))
 //    val sc = spark.SparkContext.getOrCreate()
 //    sc.cassandraTable("twitter","twitter_table")
     val tweets = TwitterUtils.createStream(ssc, None, filters)
@@ -83,8 +83,8 @@ object TwitterPopularTags {
         Document.parse(mapper.writeValueAsString(Map(
           "user" -> t.getUser.getScreenName,
           "created_at" -> t.getCreatedAt.toInstant.toString,
-          "location" -> Option(t.getGeoLocation).map(geo => {
-            s"${geo.getLatitude},${geo.getLongitude}"
+          "location" -> Option(t.getUser).map(geo => {
+            s"${geo.getLocation}"
           }),
           "text" -> t.getText,
           "hashtags" -> t.getHashtagEntities.map(_.getText),
